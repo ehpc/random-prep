@@ -1,0 +1,8 @@
+{
+  "go.goroot": "/home/ehpc/.local/share/mise/installs/go/1.25.3",
+  "go.alternateTools": {
+    "go": "/home/ehpc/.local/share/mise/shims/go",
+    "dlv": "/home/ehpc/.local/share/mise/shims/dlv",
+    "gopls": "/home/ehpc/.local/share/mise/shims/gopls"
+  }
+}
