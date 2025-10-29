@@ -321,30 +321,22 @@ import { useEffect, useMemo, useRef } from 'react';
 export function useDebounce<T extends (...args: any[]) => any>(cb: T, delay: number): T {
   const cbRef = useRef(cb);
   const delayRef = useRef(delay);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timeoutRef = useRef(null);
 
   cbRef.current = cb;
   delayRef.current = delay;
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      clearTimeout(timeoutRef.current);
     };
   }, []);
 
-  const debounced = useMemo(() => {
-    const fn = (...args: Parameters<T>) => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      timeoutRef.current = setTimeout(() => {
-        cbRef.current(...args);
-      }, delayRef.current);
-    };
-
-    return fn as unknown as T;
+  const debounced = useCallback(() => {
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      cbRef.current(...args);
+    }, delayRef.current);
   }, []);
 
   return debounced;
