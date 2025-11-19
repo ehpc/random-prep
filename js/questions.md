@@ -370,3 +370,117 @@ Examples in Node.js
 
 Rule of thumb: microtasks always run to completion right after the current task finishes and before timers or I/O handlers of the next task.
 
+# Web Worker vs Shared Worker vs Service Worker
+
+1. Web Worker
+
+Purpose: Run heavy CPU tasks off the main UI thread.
+Scope: Single page / single script that created it.
+Lifetime: Dies when its creating page/tab closes.
+Communication: postMessage to/from the parent page.
+Access: No DOM; has its own event loop.
+
+Use cases:
+  * CPU-heavy algorithms (image processing, ML inference)
+  * Parsing large data
+  * Keeping UI responsive
+
+Key point: Dedicated to exactly one tab.
+
+2. Shared Worker
+
+Purpose: Share one worker instance across multiple tabs/windows/iframes from the same origin.
+Scope: Origin-wide.
+Lifetime: Stays alive as long as any tab from the same origin is open.
+Communication: port.postMessage through a MessagePort.
+
+Use cases:
+* Multiple tabs share:
+  * WebSocket connection
+  * IndexedDB connection
+  * State/cache
+* Synchronizing state between tabs
+
+Key point: One worker, many tabs.
+
+3. Service Worker
+
+Purpose: A network proxy layer between the browser and the server.
+Scope: Controlled per-origin + per-path.
+Runs even with no tabs open? ✔ Yes (in the background).
+Lifetime: Event-based, launched on demand.
+Communication: postMessage, or indirect via fetch events.
+Access: Can intercept network requests, use Cache API, handle push notifications.
+
+Use cases:
+* Offline apps / PWAs
+* Caching strategies (cache-first, stale-while-revalidate, etc.)
+* Background sync
+* Push notifications
+
+Key point: Acts as a programmable network proxy.
+
+
+# WeakMap vs Map
+
+A weak reference does NOT prevent an object from being garbage-collected.
+
+```js
+let obj = { a: 1 };
+const w = new WeakMap();
+
+w.set(obj, "secret");
+
+// Remove last strong reference
+obj = null;
+
+// Now GC may remove the entry from WeakMap automatically
+```
+
+# WeakRef
+
+```js
+let obj = { name: "Alice" };
+const ref = new WeakRef(obj);
+
+obj = null; // object may be GC'd later
+
+const value = ref.deref(); // either the object or undefined
+```
+
+# FinalizationRegistry
+
+```js
+const registry = new FinalizationRegistry((heldValue) => {
+  console.log("Object GC'd:", heldValue);
+});
+
+let obj = { x: 123 };
+
+registry.register(obj, "my cleanup value");
+
+obj = null;
+// When GC collects obj → callback runs (eventually)
+```
+
+# How private class fields use WeakMaps internally?
+
+Before native #privateFields, library authors simulated private fields using WeakMaps.
+
+```js
+const _secret = new WeakMap();
+
+class User {
+  constructor(name, secret) {
+    _secret.set(this, secret);
+    this.name = name;
+  }
+
+  reveal() {
+    return _secret.get(this);
+  }
+}
+
+const u = new User("Alice", "password123");
+console.log(u.reveal()); // password123
+```
