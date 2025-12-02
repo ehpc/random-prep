@@ -76,3 +76,58 @@ The system should behave the same whether data is distributed across multiple lo
 ### Rule 12 — Non-subversion rule
 No low-level access mechanism may bypass relational rules or constraints.
 
+
+# What is the difference between cursor pagination and offset/limit pagination?
+
+Offset/limit pagination uses OFFSET n LIMIT m to skip a number of rows 
+and return the next batch.
+
+Cursor-based pagination uses a stable value (a "cursor") from the last 
+fetched record — often an ID or timestamp — to fetch the next set.
+
+
+🔹 Offset / Limit Pagination
+
+How it works:
+The client requests pages by telling the database: “skip X rows, then return Y rows.”
+
+```sql
+SELECT * FROM orders ORDER BY created_at LIMIT 20 OFFSET 40;
+```
+
+Pros:
+* Very simple to implement
+* Works with any sorted dataset
+* Easy to jump to arbitrary pages (page 100, etc.)
+
+Cons:
+* Slow for large offsets — the DB still walks/skips rows internally
+* Not stable: if new data is inserted, pages shift, causing duplicates or missing rows
+* Poor performance under high load
+* Can break with concurrent writes (non-repeatable pagination)
+
+🔹 Cursor-Based Pagination
+
+How it works:
+Instead of "page number", the API returns a token (cursor).
+Usually this cursor contains the last record’s unique sort value (id, created_at, etc.).
+
+```sql
+SELECT * FROM orders
+WHERE created_at > $cursor
+ORDER BY created_at
+LIMIT 20;
+```
+
+Pros:
+* Highly performant — uses indexed range scans
+* Constant-time page lookup, no matter how large the table grows
+* Stable under concurrent inserts — no shifting pages
+* Good choice for infinite-scroll
+* High scalability (Twitter, Facebook, Instagram all use cursors)
+
+Cons:
+* Harder to implement
+* Cannot easily “jump to page 100” — no absolute page numbers
+* Requires stable sorting key (monotonic field like ID or timestamp)
+
