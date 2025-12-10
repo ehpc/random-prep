@@ -484,3 +484,222 @@ class User {
 const u = new User("Alice", "password123");
 console.log(u.reveal()); // password123
 ```
+
+# What happens when we bind js function twice?
+
+```js
+function foo() {
+  console.log(this.x);
+}
+
+const a = { x: 1 };
+const b = { x: 2 };
+
+const f1 = foo.bind(a);   // this → a
+const f2 = f1.bind(b);    // trying to re-bind → ignored!
+
+f2(); // prints 1, NOT 2
+```
+
+Why?
+
+Because:
+* .bind() returns a new wrapper function.
+* That wrapper has an internal slot [[BoundThis]] that is locked.
+*  When you call .bind() on a bound function, JS creates another wrapper, 
+but the original bound this is still used.
+
+# Why use iterators in js, give some examples?
+
+1. Lazy evaluation (generate values on demand)
+
+```js
+function* counter() {
+  let i = 0;
+  while (true) {
+    yield i++;
+  }
+}
+
+const c = counter();
+console.log(c.next().value); // 0
+console.log(c.next().value); // 1
+console.log(c.next().value); // 2
+```
+
+2. Unified looping across all data types
+
+```js
+const user = {
+  name: "Eugene",
+  hobbies: ["coding", "music", "k8s"],
+  [Symbol.iterator]: function* () {
+    for (const h of this.hobbies) yield h;
+  }
+};
+
+for (const hobby of user) {
+  console.log(hobby);
+}
+```
+
+3. Memory-efficient processing of large data
+
+```js
+function* chunks(array, size) {
+  for (let i = 0; i < array.length; i += size) {
+    yield array.slice(i, i + size);
+  }
+}
+
+for (const chunk of chunks(bigArray, 1000)) {
+  processChunk(chunk);
+}
+```
+
+4. Custom iteration logic
+
+```js
+function* walk(node) {
+  yield node.value;
+
+  for (const child of node.children) {
+    yield* walk(child);
+  }
+}
+```
+
+5. Generators simplify async flow (before async/await and still useful)
+
+```js
+function* steps() {
+  console.log("Step 1");
+  yield;
+  console.log("Step 2");
+  yield;
+  console.log("Step 3");
+}
+
+const s = steps();
+s.next(); // Step 1
+s.next(); // Step 2
+s.next(); // Step 3
+```
+
+6. Streams & pipelines
+
+```js
+function* map(iter, fn) {
+  for (const v of iter) yield fn(v);
+}
+
+function* filter(iter, fn) {
+  for (const v of iter) if (fn(v)) yield v;
+}
+
+const numbers = [1,2,3,4,5];
+
+const pipeline =
+  map(
+    filter(numbers, x => x % 2 === 0),
+    x => x * 10
+  );
+
+console.log([...pipeline]); // [20, 40]
+```
+
+7. Built-in iterables rely on the iterator protocol
+
+```js
+[...new Set([1,2,3])]
+
+for (const [key, value] of new Map()) {}
+
+for (const char of "hello") {}
+```
+
+# What are loaders in webpack, give some examples
+
+Loaders in Webpack are transformers.
+They let Webpack understand and process non-JavaScript files by converting 
+them into JavaScript modules.
+
+`input file → loader → JS module → Webpack bundle`
+
+1. babel-loader
+
+```js
+module: {
+  rules: [
+    {
+      test: /\.js$/,
+      use: "babel-loader"
+    }
+  ]
+}
+```
+
+2. css-loader + style-loader
+
+```js
+import "./styles.css"; // works because of loaders
+
+module: {
+  rules: [
+    {
+      test: /\.css$/,
+      use: ["style-loader", "css-loader"]
+    }
+  ]
+}
+```
+
+3. file-loader / asset/resource
+
+```js
+import logo from "./logo.png";
+
+{
+  test: /\.(png|jpg|gif)$/i,
+  type: "asset/resource"
+}
+```
+
+4. ts-loader
+
+```js
+{
+  test: /\.ts$/,
+  use: "ts-loader"
+}
+```
+
+5. sass-loader
+
+```js
+{
+  test: /\.scss$/,
+  use: ["style-loader", "css-loader", "sass-loader"]
+}
+```
+
+6. raw-loader
+
+```js
+import template from "./email.html";
+
+{
+  test: /\.html$/,
+  use: "raw-loader"
+}
+```
+
+7. url-loader (images to base64)
+
+```js
+{
+  test: /\.(png|jpg)$/i,
+  type: "asset/inline"
+}
+```
+
